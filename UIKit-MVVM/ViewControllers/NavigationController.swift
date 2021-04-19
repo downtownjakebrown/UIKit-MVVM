@@ -5,7 +5,7 @@
 import UIKit
 
 /// The root view controller for our app
-class HomeController: UINavigationController {
+class NavigationController: UINavigationController {
     
     /// The root view controller for our app
     init() {

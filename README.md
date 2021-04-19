@@ -1,3 +1,3 @@
 #  UIKit-MVVM
 
-A sample project implementing a MVVM pattern in a UIKit app.
+A sample project implementing a very basic MVVM pattern in a UIKit app.

@@ -14,6 +14,9 @@ class ListController: UITableViewController {
     /// The list's data source
     var listViewModel = ListViewModel()
     
+    /// Indicator view for when table is loading
+    var indicator = UIActivityIndicatorView()
+    
     /// Combine helper
     private var cancellables = Set<AnyCancellable>()
     
@@ -22,6 +25,7 @@ class ListController: UITableViewController {
         super.viewDidLoad()
         setupNavigation()
         setupTable()
+        setupActivityIndicator()
         setupBindings()
     }
     
@@ -40,14 +44,8 @@ class ListController: UITableViewController {
             action: #selector(onTapRightBarButton)
         )
         navigationItem.rightBarButtonItem = rightBarButtonItem
+        navigationItem.rightBarButtonItem?.isEnabled = false
         
-    }
-    
-    /// Action called when bar button is tapped
-    @objc private func onTapRightBarButton() {
-        if listViewModel.listItems.count > 0 {
-            self.listViewModel.addListItem("List Item \(listItems.count + 1)")
-        }
     }
     
     /// Sets up the table properties
@@ -55,6 +53,50 @@ class ListController: UITableViewController {
         self.tableView.delegate = self
         self.tableView.dataSource = self
         self.tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
+        self.tableView.separatorStyle = .none
+    }
+    
+    /// Sets up the activity indicator
+    private func setupActivityIndicator() {
+        self.indicator = UIActivityIndicatorView(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
+        self.indicator.style = UIActivityIndicatorView.Style.medium
+        self.indicator.center = CGPoint(x: UIScreen.main.bounds.size.width/2, y: 20)
+        self.indicator.startAnimating()
+        self.indicator.backgroundColor = .clear
+        self.tableView.addSubview(indicator)
+    }
+    
+    /// Sets up the view's bindings to the view model
+    private func setupBindings() {
+        listViewModel.$listItems
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] listItems in
+            
+            self?.listItems = listItems
+            if self?.listItems.count ?? 0 > 0 {
+                self?.navigationItem.rightBarButtonItem?.isEnabled = true
+                self?.indicator.stopAnimating()
+                self?.indicator.hidesWhenStopped = true
+                self?.tableView.separatorStyle = .singleLine
+            }
+            
+            UIView.transition(
+                with: (self?.tableView)!,
+                duration: 0.2,
+                options: .transitionCrossDissolve,
+                animations: { self?.tableView.reloadData() },
+                completion: nil
+            )
+            
+        }
+        .store(in: &cancellables)
+    }
+    
+    /// Action called when bar button is tapped
+    @objc private func onTapRightBarButton() {
+        if listViewModel.listItems.count > 0 {
+            self.listViewModel.addListItem("List Item \(listItems.count + 1)")
+        }
     }
     
     /// The number of rows in the table
@@ -67,23 +109,6 @@ class ListController: UITableViewController {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
         cell.textLabel?.text = listItems[indexPath.row].title
         return cell
-    }
-    
-    /// Sets up the view's bindings to the view model
-    private func setupBindings() {
-        listViewModel.$listItems
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] listItems in
-            self?.listItems = listItems
-            UIView.transition(
-                with: (self?.tableView)!,
-                duration: 0.2,
-                options: .transitionCrossDissolve,
-                animations: { self?.tableView.reloadData() },
-                completion: nil
-            )
-        }
-        .store(in: &cancellables)
     }
     
 }
